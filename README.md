@@ -1,3 +1,16 @@
-# Test Repository
+# Arctic Allocation
 
-This repository now contains the **Arctic Allocation MVP** React + TypeScript application located in [`arctic-sim/`](./arctic-sim/). Refer to that folder's [README](./arctic-sim/README.md) for setup instructions and details.
+## Getting started
+
+```bash
+npm install
+npm run dev
+```
+
+The development server runs on <http://localhost:5173>. Click the map to set the incident location, Shift+Click to add staging areas, and use the left-hand panels to manage demand, capacity, and saved scenarios.
+
+## Available scripts
+
+- `npm run dev` – Start the development server.
+- `npm run build` – Type-check and build the production bundle.
+- `npm run preview` – Preview the production build locally.
