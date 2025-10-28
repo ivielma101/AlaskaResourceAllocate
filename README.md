@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Arctic Allocation
 
 ## Getting started
@@ -16,5 +15,3 @@ The development server runs on <http://localhost:5173>. Click the map to set the
 - `npm run build` – Type-check and build the production bundle.
 - `npm run preview` – Preview the production build locally.
 =======
-
->>>>>>> 0c312de9a1f6b9325f35faa8e191581282fc4e66
