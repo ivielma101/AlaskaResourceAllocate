@@ -1,8 +1,11 @@
 import type { LatLngLiteral } from 'leaflet';
 
+export type RiskLevel = 'Low' | 'Medium' | 'High';
+
 export type Incident = {
   location: LatLngLiteral | null;
   demand: number;
+  riskPreset: RiskLevel;
 };
 
 export type StagingArea = {
@@ -10,6 +13,14 @@ export type StagingArea = {
   name: string;
   location: LatLngLiteral;
   available: number;
+};
+
+export type Hospital = {
+  id: string;
+  name: string;
+  city: string;
+  location: LatLngLiteral;
+  airborneCapable: boolean;
 };
 
 export type AllocationDecision = {
@@ -26,7 +37,7 @@ export type AllocationResult = {
   unmet: number;
   averageEtaMinutes: number | null;
   totalDistanceKm: number;
-  riskLevel: 'Low' | 'Medium' | 'High';
+  riskLevel: RiskLevel;
   decisions: AllocationDecision[];
 };
 

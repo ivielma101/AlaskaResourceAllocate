@@ -6,6 +6,7 @@ import type {
   AllocationDecision,
   AllocationResult,
   Incident,
+  RiskLevel,
   Scenario,
   StagingArea
 } from '@/types/domain';
@@ -18,6 +19,37 @@ const generateId = () =>
 const DEFAULT_TRAVEL_SPEED = 200;
 const DEFAULT_ANCHORAGE: LatLngLiteral = { lat: 61.2181, lng: -149.9003 };
 
+const RISK_DEMAND_MAP: Record<RiskLevel, number> = {
+  Low: 60,
+  Medium: 140,
+  High: 260
+};
+
+const inferRiskFromDemand = (demand: number): RiskLevel => {
+  if (demand <= (RISK_DEMAND_MAP.Low + RISK_DEMAND_MAP.Medium) / 2) return 'Low';
+  if (demand <= (RISK_DEMAND_MAP.Medium + RISK_DEMAND_MAP.High) / 2) return 'Medium';
+  return 'High';
+};
+
+export type MapLayerState = {
+  showCities: boolean;
+  showHospitals: boolean;
+  showRoutes: boolean;
+  showArrows: boolean;
+  showDistances: boolean;
+  showLegend: boolean;
+};
+
+export type IconTheme = 'classic' | 'contrast';
+
+export type SelectedFeature = {
+  type: 'incident' | 'staging' | 'hospital' | 'city' | 'route' | null;
+  id?: string;
+  title?: string;
+  description?: string;
+  meta?: Array<{ label: string; value: string }>;
+};
+
 export type ToastMessage = {
   message: string;
   tone?: 'info' | 'success' | 'error';
@@ -29,14 +61,22 @@ type SimulationState = {
   travelSpeedKph: number;
   scenarios: Scenario[];
   toast: ToastMessage | null;
+  mapLayers: MapLayerState;
+  iconTheme: IconTheme;
+  selectedFeature: SelectedFeature;
   setIncidentLocation: (location: LatLngLiteral | null) => void;
   setDemand: (demand: number) => void;
+  setRiskPreset: (risk: RiskLevel, options?: { syncDemand?: boolean }) => void;
   reset: () => void;
   addStaging: (location?: LatLngLiteral, initial?: Partial<Omit<StagingArea, 'id' | 'location'>>) => StagingArea;
   updateStaging: (id: string, patch: Partial<Omit<StagingArea, 'id'>>) => void;
   removeStaging: (id: string) => void;
   setTravelSpeed: (speed: number) => void;
   computeAllocation: () => AllocationResult | null;
+  setLayerVisibility: (layer: keyof MapLayerState, value: boolean) => void;
+  toggleLayer: (layer: keyof MapLayerState) => void;
+  setIconTheme: (theme: IconTheme) => void;
+  setSelectedFeature: (feature: SelectedFeature) => void;
   refreshScenarios: () => void;
   saveScenario: (name: string) => void;
   deleteScenario: (id: string) => void;
@@ -47,7 +87,8 @@ type SimulationState = {
 
 const initialIncident: Incident = {
   location: null,
-  demand: 0
+  demand: 0,
+  riskPreset: 'Low'
 };
 
 export const useSimulationStore = create<SimulationState>((set, get) => ({
@@ -56,10 +97,50 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
   travelSpeedKph: DEFAULT_TRAVEL_SPEED,
   scenarios: loadScenarios(),
   toast: null,
+  mapLayers: {
+    showCities: true,
+    showHospitals: true,
+    showRoutes: true,
+    showArrows: true,
+    showDistances: true,
+    showLegend: true
+  },
+  iconTheme: 'classic',
+  selectedFeature: { type: null },
   setIncidentLocation: (location) =>
-    set((state) => ({ incident: { ...state.incident, location } })),
+    set((state) => ({
+      incident: { ...state.incident, location },
+      selectedFeature: location
+        ? {
+            type: 'incident',
+            title: 'Incident Location',
+            description: 'Active incident under evaluation',
+            meta: location
+              ? [
+                  { label: 'Latitude', value: location.lat.toFixed(3) },
+                  { label: 'Longitude', value: location.lng.toFixed(3) }
+                ]
+              : undefined
+          }
+        : { type: null }
+    })),
   setDemand: (demand) =>
-    set((state) => ({ incident: { ...state.incident, demand: Math.max(0, demand) } })),
+    set((state) => ({
+      incident: {
+        ...state.incident,
+        demand: Math.max(0, demand),
+        riskPreset: inferRiskFromDemand(Math.max(0, demand))
+      }
+    })),
+  setRiskPreset: (risk, options) =>
+    set((state) => ({
+      incident: {
+        ...state.incident,
+        riskPreset: risk,
+        demand:
+          options?.syncDemand === false ? state.incident.demand : RISK_DEMAND_MAP[risk]
+      }
+    })),
   reset: () =>
     set({
       incident: { ...initialIncident },
@@ -159,6 +240,12 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
       decisions: remainingDecisions
     };
   },
+  setLayerVisibility: (layer, value) =>
+    set((state) => ({ mapLayers: { ...state.mapLayers, [layer]: value } })),
+  toggleLayer: (layer) =>
+    set((state) => ({ mapLayers: { ...state.mapLayers, [layer]: !state.mapLayers[layer] } })),
+  setIconTheme: (theme) => set({ iconTheme: theme }),
+  setSelectedFeature: (feature) => set({ selectedFeature: feature }),
   refreshScenarios: () => set({ scenarios: loadScenarios() }),
   saveScenario: (name) => {
     const { incident, stagingAreas } = get();
@@ -186,7 +273,11 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     const scenario = get().scenarios.find((s) => s.id === id);
     if (!scenario) return;
     set({
-      incident: scenario.incident,
+      incident: {
+        ...scenario.incident,
+        riskPreset:
+          scenario.incident.riskPreset ?? inferRiskFromDemand(Math.max(0, scenario.incident.demand ?? 0))
+      },
       stagingAreas: scenario.stagingAreas,
       toast: { message: `Loaded "${scenario.name}"`, tone: 'success' }
     });
@@ -195,7 +286,8 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     set({
       incident: {
         location: { lat: 64.5122, lng: -165.4064 },
-        demand: 120
+        demand: 180,
+        riskPreset: 'High'
       },
       stagingAreas: [
         {

@@ -5,6 +5,12 @@ import { ScenariosPanel } from '@/components/ScenariosPanel';
 import { StagingAreasPanel } from '@/components/StagingAreasPanel';
 import { ToastBanner } from '@/components/ToastBanner';
 import { TopBar } from '@/components/TopBar';
+import { HospitalsPanel } from '@/components/HospitalsPanel';
+import { LayerControlPanel } from '@/components/LayerControlPanel';
+import { MapFeatureDetails } from '@/components/MapFeatureDetails';
+import { SimulationControlsPanel } from '@/components/SimulationControlsPanel';
+import { ScenarioComparisonPanel } from '@/components/ScenarioComparisonPanel';
+import { GuidedTourPanel } from '@/components/GuidedTourPanel';
 import { useSimulationStore } from '@/app/store';
 
 const App = () => {
@@ -18,14 +24,20 @@ const App = () => {
         <div className="grid flex-1 gap-4 lg:grid-cols-12">
           <div className="space-y-4 lg:col-span-4">
             <IncidentPanel />
+            <SimulationControlsPanel />
             <StagingAreasPanel />
+            <LayerControlPanel />
+            <HospitalsPanel />
+            <GuidedTourPanel />
             <ScenariosPanel />
           </div>
           <div className="flex flex-col gap-4 lg:col-span-8">
             <div className="h-[60vh] min-h-[360px] rounded-lg bg-white shadow">
               <MapView />
             </div>
+            <MapFeatureDetails />
             <AllocationPanel />
+            <ScenarioComparisonPanel />
           </div>
         </div>
       </main>
